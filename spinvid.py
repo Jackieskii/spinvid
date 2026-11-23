@@ -20,7 +20,7 @@ import engine as E
 
 IS_MAC = sys.platform == "darwin"
 IS_WIN = os.name == "nt"
-UI_FONT = UI_FONT if IS_WIN else ("Helvetica Neue" if IS_MAC else "DejaVu Sans")
+UI_FONT = "Segoe UI" if IS_WIN else ("Helvetica Neue" if IS_MAC else "DejaVu Sans")
 
 IMAGE_TYPES = [("Images", "*.png *.jpg *.jpeg *.webp *.bmp *.gif *.tif *.tiff"),
                ("All files", "*.*")]
