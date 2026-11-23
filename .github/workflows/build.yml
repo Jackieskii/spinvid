@@ -1,0 +1,72 @@
+# Builds SpinVid for Windows and Mac on GitHub's computers, then publishes the
+# downloads on this repo's "Releases" page. Runs on every push to main, or
+# manually from the Actions tab ("Build SpinVid" -> "Run workflow").
+name: Build SpinVid
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest     # -> SpinVid-windows.exe
+          - os: macos-latest       # Apple Silicon Macs (M1/M2/M3/M4…) -> SpinVid-mac-apple-silicon.zip
+          - os: macos-15-intel     # older Intel Macs -> SpinVid-mac-intel.zip
+    runs-on: ${{ matrix.os }}
+    env:
+      SPINVID_USE_IMAGEIO: "1"     # bundle imageio-ffmpeg's portable FFmpeg
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Tkinter
+        run: python -c "import tkinter; print('Tk', tkinter.TkVersion)"
+
+      - name: Install build tools
+        run: python -m pip install -r requirements.txt pyinstaller imageio-ffmpeg
+
+      - name: Build
+        run: python build.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SpinVid-${{ matrix.os }}
+          path: release/*
+
+  release:
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - run: ls -la out
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: SpinVid downloads
+          body: |
+            **Windows:** download `SpinVid-windows.exe` and double-click it.
+            If Windows says "Windows protected your PC", click **More info → Run anyway**.
+
+            **Mac:** download the Mac zip for your Mac's chip (Apple menu → About This Mac:
+            "Apple M…" = apple-silicon, "Intel" = intel), unzip it, and drag SpinVid to Applications.
+            The first time, open it, click **Done** on the warning, then go to
+            **System Settings → Privacy & Security** and click **Open Anyway**.
+          files: out/*
+          make_latest: true
